@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./configs/db.js";
 import { inngest, functions } from "./inngest/index.js";
+import inngestExpress from "inngest/express"
 
 dotenv.config();
 
@@ -22,7 +23,7 @@ app.get("/", (req, res) => {
 });
 
 // Inngest Functions
-app.use("/api/inngest", serve({ client: inngest, functions }));
+app.use("/api/inngest", inngestExpress({ client: inngest, functions }));
 
 // Running The Server
 const port = process.env.PORT || 4000;
