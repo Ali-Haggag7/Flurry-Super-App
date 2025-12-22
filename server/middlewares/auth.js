@@ -1,34 +1,39 @@
-// ده ملف middlewares/auth.js (أو protect.js)
-
-// 1. هنجيب express-async-handler عشان الكود يبقى أنضف
 import expressAsyncHandler from "express-async-handler";
+import User from "../models/User.js";
 
-/**----------------------------------------------
- * @desc "البواب" اللي بيتأكد من التوكن
- * @route (بيشتغل قبل أي راوت محمي)
- * @method Middleware
- * @access Private
---------------------------------------------------*/
+// 1. (البواب الصارم) 👮‍♂️
+// ده بيستخدم لباقي الموقع (لازم تكون مسجل وعندك داتا في المونجو)
 export const protect = expressAsyncHandler(async (req, res, next) => {
+    const { userId } = req.auth();
 
-    // 1. هنتأكد من اليوزر (زي ما الكود القديم كان بيعمل)
-    const { userId } = await req.auth();
-
-    // 2. لو مفيش يوزر (التوكن بايظ أو منتهي)
     if (!userId) {
-        res.status(401); // 401 = Unauthorized
-        throw new Error("Unauthorized, token failed");
+        res.status(401);
+        throw new Error("Unauthorized, no token")
     }
 
-    // 3. (!! التعديل الأهم !!)
-    // لو اليوزر سليم، هنحط الـ ID بتاعه في الـ "request" 
-    // عشان "المدير" (الكنترولر) اللي جاي بعده يستخدمه
-    req.user = {
-        id: userId
-    };
+    const user = await User.findOne({ clerkId: userId });
 
-    // 4. نفتح الباب ونعدي الطلب للـ "controller"
+    if (!user) {
+        res.status(401);
+        throw new Error("User not found in database (Sync Error)");
+    }
+
+    req.user = user;
     next();
+});
 
-    // (مش محتاجين try...catch عشان expressAsyncHandler)
+// 2. (البواب المتساهل) 🎫
+// ده هنستخدمه للـ Sync بس (يتأكد إنك جاي من Clerk، بس مش شرط تكون في الداتابيز لسه)
+export const verifyToken = expressAsyncHandler(async (req, res, next) => {
+    // 1. هات الـ Clerk ID
+    const { userId } = req.auth();
+
+    // 2. لو مفيش ID يبقى أنت مش مسجل أصلاً في Clerk
+    if (!userId) {
+        res.status(401);
+        throw new Error("Unauthorized, no Clerk token");
+    }
+
+    // 3. عدي يا بطل (مش هندور في الداتابيز، الكنترولر هو اللي هيتصرف)
+    next();
 });

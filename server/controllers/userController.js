@@ -1,7 +1,6 @@
 import expressAsyncHandler from "express-async-handler";
 import User from "../models/User.js";
-import imagekit from "../configs/imagekit.js";
-
+import imagekit from "../configs/imageKit.js";
 
 /**----------------------------------------------
  * @desc (دي الفانكشن اللي هتحل المشكلة)
@@ -11,43 +10,54 @@ import imagekit from "../configs/imagekit.js";
  * @access Private (محمي بتوكن)
 --------------------------------------------------*/
 export const syncUser = expressAsyncHandler(async (req, res) => {
-    // 1. هنجيب الـ ID اللي "البواب" (protect) جهزه
-    const { id: userId } = req.user;
+    // 1. استقبل البيانات
+    // (Clerk بيبعت الـ ID باسم "id"، وممكن "userId" حسب إنت باعت إيه من الفرونت)
+    // عشان نضمن إننا ماسكين الـ ID صح، هنطبع الـ Body الأول
+    console.log("Sync User Body:", req.body);
 
-    // 2. هندور في الداتا بيز بتاعتنا (Mongo)
-    let user = await User.findById(userId);
+    const { id, emailAddresses, firstName, lastName, imageUrl, username } = req.body;
 
-    // 3. لو لقيناه (اليوزر ده عمل مزامنة قبل كده)
+    // لو الـ id مجاش في الـ body، نحاول نجيبه من الـ auth (كحل احتياطي)
+    const clerkUserId = id || req.auth().userId;
+
+    if (!clerkUserId) {
+        res.status(400);
+        throw new Error("Clerk User ID is missing");
+    }
+
+    // تجهيز البيانات
+    const email = emailAddresses?.[0]?.emailAddress || req.body.email;
+    const fullName = (firstName && lastName) ? `${firstName} ${lastName}` : (req.body.fullName || "User");
+    const image = imageUrl || req.body.profilePicture || "";
+    const userNameData = username || req.body.username || email.split("@")[0];
+
+    // 2. البحث باستخدام clerkId
+    let user = await User.findOne({ clerkId: clerkUserId });
+
+    // 3. التحديث
     if (user) {
-        // رجع بياناته وخلاص
-        return res.status(200).json({ success: true, data: user, message: "User already synced" });
+        user.email = email;
+        user.full_name = fullName;
+        if (image) {  // نحدث الصورة بس لو في صورة جديدة
+            user.profile_picture = image;
+        }
+        user.username = userNameData;
+        await user.save();
+        console.log("User Updated:", user);
+        return res.status(200).json({ success: true, user });
     }
 
-    // 4. لو ملقنهوش (ده أول مرة يدخل)
-    // هناخد بياناته اللي الريأكت بعتهلنا
-    const { email, fullName, username, profilePicture } = req.body;
-
-    // 5. هنتأكد إن البيانات الأساسية جاية
-    if (!email || !fullName || !username) {
-        res.status(400); // 400 = Bad Request
-        throw new Error("Missing required user information for sync");
-    }
-
-    // 6. هنخلق اليوزر الجديد في "الداتا بيز بتاعتنا"
-    // (بنفس الـ _id بتاع Clerk)
-    user = new User({
-        _id: userId, // <-- أهم حتة
+    // 4. الإنشاء
+    user = await User.create({
+        clerkId: clerkUserId, // ✅ هنا الربط المهم جداً
         email: email,
         full_name: fullName,
-        username: username  || "Ali",
-        profile_picture: profilePicture || "" // لو مفيش صورة بروفايل في Clerk
+        username: userNameData,
+        profile_picture: image
     });
 
-    // 7. نحفظ اليوزر الجديد
-    await user.save();
-
-    // 8. نرجعه للفرونت إند (201 = Created)
-    res.status(201).json({ success: true, data: user, message: "User synced successfully" });
+    console.log("User Created:", user);
+    res.status(201).json({ success: true, user });
 });
 
 
@@ -104,7 +114,7 @@ export const updateUserData = expressAsyncHandler(async (req, res) => {
 
     // 3. هنتأكد إن اليوزرنيم مش متاخد (لو اليوزر بيغيره)
     if (username) {
-        const tempUser = await User.findById(userId);
+        const tempUser = await User.findOne({ clerkId: userId });
         if (tempUser.username !== username) {
             // اليوزر بيغير اسمه، نتأكد إن الاسم الجديد مش متاخد
             const userExists = await User.findOne({ username });
@@ -172,7 +182,7 @@ export const updateUserData = expressAsyncHandler(async (req, res) => {
 
     // 9. نحدث الداتا بيز مرة واحدة بكل البيانات
     // .select("-password") عشان منرجعش الباسورد لليوزر
-    const user = await User.findByIdAndUpdate(userId, updatedData, { new: true }).select("-password");
+    const user = await User.findOneAndUpdate({ clerkId: userId }, updatedData, { new: true }).select("-password");
 
     if (user) {
         return res.status(200).json({ success: true, data: user, message: "User updated successfully" });

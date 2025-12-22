@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    _id: {
+    clerkId: {
         type: String,
-        required: true
-        // ده سليم 100% عشان ده الـ ID اللي جاي من Clerk
+        required: true,
+        unique: true, // عشان ميتكررش
+        index: true   // عشان البحث بيه يبقى صاروخ
     },
     email: {
         type: String,
@@ -53,13 +54,16 @@ const userSchema = new mongoose.Schema({
             ref: "User" // ده بيشاور على الموديل اللي اسمه "User"
         }
     ],
+    blockedUsers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    }],
 
     // (!! التحسين التاني: شيلنا الباسورد لإن Clerk هو المسئول عنه !!)
     // password: { ... }  <-- اتشال
 
 }, {
     timestamps: true,  // هيضيف createdAt و updatedAt
-    collection: "User" // اسم الكولكشن في الداتا بيز
 });
 
 const User = mongoose.model("User", userSchema);  // إنشاء الموديل

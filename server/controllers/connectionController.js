@@ -200,3 +200,72 @@ export const acceptConnection = expressAsyncHandler(async (req, res) => {
         session.endSession();
     }
 });
+
+
+/**----------------------------------------------
+ * @desc Block User
+ * @route /api/connection/block/:id
+ * @method POST
+ * @access Private
+--------------------------------------------------*/
+export const blockUser = expressAsyncHandler(async (req, res) => {
+    const { userId: clerkId } = req.auth();
+    const { id: targetUserId } = req.params; // ده MongoID للشخص اللي هنعمله بلوك
+
+    // 1. هات اليوزر بتاعي (عشان الـ Mongo ID)
+    const currentUser = await User.findOne({ clerkId });
+    if (!currentUser) throw new Error("User not found");
+
+    if (currentUser._id.toString() === targetUserId) {
+        res.status(400);
+        throw new Error("You cannot block yourself.");
+    }
+
+    // 2. ضيفه لقائمة البلوك (استخدمنا $addToSet عشان لو دوست مرتين ميتكررش)
+    await User.findByIdAndUpdate(currentUser._id, {
+        $addToSet: { blockedUsers: targetUserId }
+    });
+
+    // 3. (Premium Step 🔥) "قطع العلاقات"
+    // لازم نمسح أي كونكشن كان بينكم (سواء pending أو accepted)
+    await Connection.findOneAndDelete({
+        $or: [
+            { from_user_id: currentUser._id, to_user_id: targetUserId },
+            { from_user_id: targetUserId, to_user_id: currentUser._id }
+        ]
+    });
+
+    // (اختياري) لو عندك نظام Follow، شيل الفولو كمان
+    await User.findByIdAndUpdate(currentUser._id, { $pull: { following: targetUserId } });
+    await User.findByIdAndUpdate(targetUserId, { $pull: { followers: currentUser._id } });
+
+    res.status(200).json({
+        success: true,
+        message: "User blocked successfully"
+    });
+});
+
+
+/**----------------------------------------------
+ * @desc Unblock User
+ * @route /api/connection/unblock/:id
+ * @method POST
+ * @access Private
+--------------------------------------------------*/
+export const unblockUser = expressAsyncHandler(async (req, res) => {
+    const { userId: clerkId } = req.auth();
+    const { id: targetUserId } = req.params;
+
+    const currentUser = await User.findOne({ clerkId });
+    if (!currentUser) throw new Error("User not found");
+
+    // شيله من القائمة
+    await User.findByIdAndUpdate(currentUser._id, {
+        $pull: { blockedUsers: targetUserId }
+    });
+
+    res.status(200).json({
+        success: true,
+        message: "User unblocked successfully"
+    });
+});

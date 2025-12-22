@@ -13,7 +13,9 @@ import { protect } from "../middlewares/auth.js";
 import {
     sendConnectionRequest,
     getUserConnections,
-    acceptConnection
+    acceptConnection,
+    blockUser,
+    unblockUser
 } from "../controllers/connectionController.js";
 
 // 3. بننشئ الراوتر بتاعنا
@@ -42,6 +44,20 @@ connectionRouter.get("/get", protect, getUserConnections);
 // @method POST
 // @access Private
 connectionRouter.post("/accept", protect, acceptConnection);
+
+// 4. رابط عشان "أبلوك" يوزر
+// @desc Block User
+// @route /api/connection/block
+// @method POST
+// @access Private
+connectionRouter.post("/block", protect, blockUser);
+
+// 5. رابط عشان "أنبلوك" يوزر
+// @desc Unblock User
+// @route /api/connection/unblock
+// @method POST
+// @access Private
+connectionRouter.post("/unblock", protect, unblockUser);
 
 
 // 4. بنصدّر الراوتر عشان server.js يستخدمه
