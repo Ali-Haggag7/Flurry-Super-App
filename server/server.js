@@ -39,7 +39,7 @@ app.use(helmet());
 
 // CORS: Cross-Origin Resource Sharing
 app.use(cors({
-    origin: process.env.CLIENT_URL ? [process.env.CLIENT_URL, "http://localhost:5173", "http://localhost:4173"] : "*",
+    origin: process.env.CLIENT_URL ? [process.env.CLIENT_URL, "http://localhost:5173", "http://localhost:4173", "https://flurry-kkz2j0vdg-ali-haggags-projects.vercel.app"] : "*",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
 }));

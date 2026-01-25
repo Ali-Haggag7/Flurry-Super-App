@@ -23,9 +23,12 @@ const io = new Server(server, {
     cors: {
         origin: [
             "http://localhost:5173", // Development
-            "http://localhost:4173", // Preview Mode
+            "http://localhost:4173", // Preview
+            "https://flurry-kkz2j0vdg-ali-haggags-projects.vercel.app",
+            "https://flurry-app.vercel.app"
         ],
         methods: ["GET", "POST"],
+        credentials: true
     },
 });
 
