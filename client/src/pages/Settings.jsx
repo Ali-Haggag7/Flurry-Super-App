@@ -149,7 +149,7 @@ const TabButton = memo(({ tab, isActive, onClick }) => (
     <button
         onClick={onClick}
         className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 relative overflow-hidden group whitespace-nowrap
-      ${isActive
+        ${isActive
                 ? "text-primary bg-primary/10 shadow-sm"
                 : "text-muted hover:text-content hover:bg-surface"
             }`}
@@ -329,12 +329,15 @@ const PrivacySettings = ({ currentUser }) => {
                 }
 
                 toast.success(
-                    `${key === "isPrivate" ? "Private Profile" : "Online Status"} updated!`
+                    `${key === "isPrivate" ? "Private Profile" : "Online Status"} updated!`,
+                    {
+                        id: key,
+                    }
                 );
             } catch (error) {
                 // Revert on failure
                 setPrivacySettings((prev) => ({ ...prev, [key]: !value }));
-                toast.error("Failed to update settings");
+                toast.error("Failed to update settings", { id: key });
             }
         },
         [dispatch, getToken, socket]

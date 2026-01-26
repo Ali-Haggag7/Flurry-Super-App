@@ -70,12 +70,6 @@ export const updateUser = createAsyncThunk(
             },
         });
 
-        toast.promise(promise, {
-            loading: 'Updating profile...',
-            success: 'Profile updated successfully!',
-            error: (err) => err.response?.data?.message || 'Update failed',
-        });
-
         try {
             const response = await promise;
             return response.data.data;
@@ -97,8 +91,6 @@ export const updatePrivacy = createAsyncThunk(
 
         toast.promise(promise, {
             loading: 'Saving privacy settings...',
-            success: 'Privacy updated!',
-            error: 'Failed to update privacy',
         });
 
         try {
@@ -122,8 +114,6 @@ export const updateNotificationSettings = createAsyncThunk(
 
         toast.promise(promise, {
             loading: 'Updating preferences...',
-            success: 'Notification settings saved!',
-            error: 'Failed to save settings',
         });
 
         try {

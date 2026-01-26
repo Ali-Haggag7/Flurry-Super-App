@@ -1,12 +1,8 @@
 /**
- * PostDetails Page
+ * PostDetails Page (FIXED)
  * ------------------------------------------------------------------
  * Detailed view of a single post with nested comments system.
- * * Architecture:
- * - Decomposed into memoized sub-components (Header, Content, Media, Stats, Input).
- * - Optimistic UI updates for high-latency actions (Like, Save, Delete).
- * - Virtualized-style state management for deep comment trees.
- * - Strict Theme System compliance (bg-main, text-content, border-adaptive).
+ * Fixed Share Count persistence issue by using local integer state.
  */
 
 import { useEffect, useState, useMemo, useRef, useCallback, memo } from "react";
@@ -35,21 +31,6 @@ import EditPostModal from "../components/modals/EditPostModal";
 import ReportModal from "../components/modals/ReportModal";
 
 // --- Helpers ---
-
-// Recursive State Update for Replies (Preserved)
-const addReplyToState = (comments, parentId, newReply) => {
-    return comments.map(comment => {
-        if (comment._id === parentId) {
-            return { ...comment, children: [...(comment.children || []), newReply] };
-        }
-        if (comment.children && comment.children.length > 0) {
-            return { ...comment, children: addReplyToState(comment.children, parentId, newReply) };
-        }
-        return comment;
-    });
-};
-
-// Recursive Deletion (Preserved)
 const getFamilyIds = (parentId, allComments) => {
     let ids = [parentId];
     const children = allComments.filter(c => c.parentId === parentId);
@@ -57,11 +38,8 @@ const getFamilyIds = (parentId, allComments) => {
     return ids;
 };
 
-// --- Sub-Components (Local & Memoized) ---
+// --- Sub-Components ---
 
-/**
- * PostHeader: Navigation and Options Menu
- */
 const PostHeader = memo(({
     navigate, post, isOwner, isSaved,
     showOptionsMenu, setShowOptionsMenu,
@@ -70,7 +48,6 @@ const PostHeader = memo(({
     <div className="sticky top-0 z-30 bg-surface/90 backdrop-blur-xl border-b border-adaptive px-4 py-3 flex items-center gap-4 shadow-sm transition-all duration-300">
         <button
             onClick={() => navigate(-1)}
-            aria-label="Back"
             className="p-2 hover:bg-main rounded-full transition active:scale-95 text-content group"
         >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -84,8 +61,7 @@ const PostHeader = memo(({
                 By @{post?.user?.username || "username"}
             </p>
         </div>
-
-        {/* Options Menu */}
+        {/* Options Menu Code */}
         <div className="relative ml-auto">
             <button
                 onClick={(e) => { e.stopPropagation(); setShowOptionsMenu(!showOptionsMenu); }}
@@ -93,7 +69,6 @@ const PostHeader = memo(({
             >
                 <MoreHorizontal size={20} />
             </button>
-
             <AnimatePresence>
                 {showOptionsMenu && (
                     <>
@@ -102,7 +77,6 @@ const PostHeader = memo(({
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            transition={{ duration: 0.2 }}
                             className="absolute right-0 top-full mt-2 w-48 bg-surface rounded-xl border border-adaptive shadow-xl z-50 overflow-hidden"
                         >
                             <button onClick={onCopyLink} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-content hover:bg-main transition-colors border-b border-adaptive">
@@ -134,12 +108,8 @@ const PostHeader = memo(({
     </div>
 ));
 
-/**
- * PostMedia: Handles the image grid display
- */
 const PostMedia = memo(({ images, onSelectImage }) => {
     if (!images?.length) return null;
-
     return (
         <div className={`grid gap-2 rounded-2xl overflow-hidden mt-3 mb-5 border border-adaptive ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
             {images.map((img, idx) => (
@@ -165,12 +135,10 @@ const PostMedia = memo(({ images, onSelectImage }) => {
     );
 });
 
-/**
- * StatsBar: Likes, Comments, Shares interaction
- */
+// 🔥 Updated StatsBar: Accepts 'sharesCount' (number)
 const StatsBar = memo(({
-    commentsCount, shares, currentUser, post,
-    showShareMenu, setShowShareMenu, showInternalShareModal, setShowInternalShareModal,
+    commentsCount, sharesCount, showShareMenu, setShowShareMenu,
+    showInternalShareModal, setShowInternalShareModal,
     onExternalShare, incrementShareCount
 }) => (
     <div className="pt-4 border-t border-adaptive flex items-center justify-between text-sm text-muted">
@@ -184,7 +152,7 @@ const StatsBar = memo(({
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 ${showShareMenu ? "bg-primary text-white" : "hover:bg-main text-muted hover:text-primary"}`}
             >
                 <Share2 size={18} />
-                {shares?.length > 0 && <span className="font-bold">{shares.length}</span>}
+                {sharesCount > 0 && <span className="font-bold">{sharesCount}</span>}
             </button>
 
             <AnimatePresence>
@@ -211,15 +179,12 @@ const StatsBar = memo(({
         <ShareModal
             isOpen={showInternalShareModal}
             onClose={() => setShowInternalShareModal(false)}
-            post={post}
+            post={null} // Pass post object from parent if needed by ShareModal
             onSuccess={incrementShareCount}
         />
     </div>
 ));
 
-/**
- * CommentInput: Fixed bottom bar
- */
 const CommentInput = memo(({
     currentUser, commentText, submitting, textareaRef,
     onInput, onSubmit
@@ -250,9 +215,6 @@ const CommentInput = memo(({
     </div>
 ));
 
-/**
- * Lightbox: Full screen image viewer
- */
 const Lightbox = ({ selectedImage, onClose }) => (
     <AnimatePresence>
         {selectedImage && (
@@ -283,7 +245,6 @@ const Lightbox = ({ selectedImage, onClose }) => (
 // --- Main Component ---
 
 const PostDetails = () => {
-    // --- Hooks ---
     const { id: postId } = useParams();
     const { getToken } = useAuth();
     const navigate = useNavigate();
@@ -297,6 +258,9 @@ const PostDetails = () => {
     const [submitting, setSubmitting] = useState(false);
     const [comments, setComments] = useState([]);
     const [selectedImage, setSelectedImage] = useState(null);
+
+    // 🔥 FIX: Local shares count state
+    const [sharesCount, setSharesCount] = useState(0);
 
     // Menu & Modal States
     const [showShareMenu, setShowShareMenu] = useState(false);
@@ -322,8 +286,9 @@ const PostDetails = () => {
                 if (data.success && isMounted) {
                     setPost(data.post);
                     setIsSaved(data.post.saves?.includes(currentUser?._id) || false);
+                    // 🔥 Initialize shares count from DB
+                    setSharesCount(data.post.shares?.length || 0);
 
-                    // Deduplicate comments
                     const uniqueComments = [...new Map((data.comments || data.post.comments || []).map(item => [item._id, item])).values()];
                     setComments(uniqueComments);
                 }
@@ -337,21 +302,48 @@ const PostDetails = () => {
         };
 
         if (postId) fetchPost();
-
         return () => { isMounted = false; };
     }, [postId, getToken, currentUser, navigate]);
 
-    // --- Handlers (Memoized) ---
+    // --- Handlers ---
 
-    // 1. Post Actions
+    // 2. Share Actions (FIXED: Just increment local integer)
+    const incrementShareCount = useCallback(async () => {
+        try {
+            const token = await getToken();
+            await api.put(`/post/share/${post._id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+            setSharesCount(prev => prev + 1);
+        } catch (error) { console.error("Failed to record share"); }
+    }, [post, getToken]);
+
+    const handleExternalShare = useCallback(async () => {
+        setShowShareMenu(false);
+        const shareUrl = `${window.location.origin}/post/${post._id}`;
+        const shareData = {
+            title: `Post by ${post.user?.full_name}`,
+            text: (post.text || post.content)?.substring(0, 50) + "...",
+            url: shareUrl
+        };
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+                await incrementShareCount();
+                toast.success("Thanks for sharing! 🚀");
+            } else {
+                await navigator.clipboard.writeText(shareUrl);
+                await incrementShareCount();
+                toast.success("Link copied! 📋");
+            }
+        } catch (err) { if (err.name !== 'AbortError') toast.error("Failed to share"); }
+    }, [post, incrementShareCount]);
+
+    // Other Handlers (Standard)
     const handleSavePost = useCallback(async () => {
         if (!currentUser) return toast.error("Please login first");
-
         const oldIsSaved = isSaved;
-        setIsSaved(!isSaved); // Optimistic
+        setIsSaved(!isSaved);
         setShowOptionsMenu(false);
         toast.success(!isSaved ? "Post Saved 💾" : "Removed from Saved");
-
         try {
             const token = await getToken();
             await api.put(`/post/save/${post._id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
@@ -378,52 +370,15 @@ const PostDetails = () => {
         setShowOptionsMenu(false);
     }, [post]);
 
-    // 2. Share Actions
-    const incrementShareCount = useCallback(async () => {
-        try {
-            const token = await getToken();
-            await api.put(`/post/share/${post._id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
-            setPost(prev => ({
-                ...prev,
-                shares: [...(prev.shares || []), currentUser._id]
-            }));
-        } catch (error) { console.error("Failed to record share"); }
-    }, [post, currentUser, getToken]);
-
-    const handleExternalShare = useCallback(async () => {
-        setShowShareMenu(false);
-        const shareUrl = `${window.location.origin}/post/${post._id}`;
-        const shareData = {
-            title: `Post by ${post.user?.full_name}`,
-            text: (post.text || post.content)?.substring(0, 50) + "...",
-            url: shareUrl
-        };
-        try {
-            if (navigator.share) {
-                await navigator.share(shareData);
-                await incrementShareCount();
-                toast.success("Thanks for sharing! 🚀");
-            } else {
-                await navigator.clipboard.writeText(shareUrl);
-                await incrementShareCount();
-                toast.success("Link copied! 📋");
-            }
-        } catch (err) { if (err.name !== 'AbortError') toast.error("Failed to share"); }
-    }, [post, incrementShareCount]);
-
-    // 3. Comment Actions
     const handleAddComment = useCallback(async (text, parentId = null) => {
         if (!text || !text.trim()) return toast.error("Comment cannot be empty.");
-
         setSubmitting(true);
         try {
             const token = await getToken();
             const { data } = await api.post(`/post/comment/${postId}`, { text, parentId }, { headers: { Authorization: `Bearer ${token}` } });
-
             if (data.success) {
                 toast.success(parentId ? "Reply added!" : "Comment added!");
                 setComments(prev => [...prev, data.comment]);
-
                 if (!parentId) {
                     setCommentText("");
                     if (textareaRef.current) textareaRef.current.style.height = 'auto';
@@ -435,11 +390,9 @@ const PostDetails = () => {
 
     const handleDeleteComment = useCallback(async (commentId) => {
         if (!window.confirm("Delete this comment?")) return;
-
         const idsToDelete = getFamilyIds(commentId, comments);
         const oldComments = [...comments];
         setComments(prev => prev.filter(c => !idsToDelete.includes(c._id)));
-
         try {
             const token = await getToken();
             await api.delete(`/post/comment/${commentId}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -462,7 +415,6 @@ const PostDetails = () => {
     const handleLikeComment = useCallback(async (commentId) => {
         if (!currentUser) return toast.error("Please login first");
         const currentUserId = String(currentUser._id);
-
         setComments(prev => prev.map(c => {
             if (c._id === commentId) {
                 const isLiked = c.likes?.some(id => String(id) === currentUserId);
@@ -473,7 +425,6 @@ const PostDetails = () => {
             }
             return c;
         }));
-
         try {
             const token = await getToken();
             await api.post(`/post/comment/like/${commentId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
@@ -486,8 +437,6 @@ const PostDetails = () => {
         e.target.style.height = `${e.target.scrollHeight}px`;
     }, []);
 
-    // --- Render ---
-
     if (loading) return (
         <div className="min-h-screen bg-main flex items-center justify-center">
             <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -496,7 +445,6 @@ const PostDetails = () => {
 
     return (
         <div className="min-h-screen bg-main text-content pb-32 md:pb-24 relative transition-colors duration-300">
-
             <PostHeader
                 navigate={navigate}
                 post={post}
@@ -512,13 +460,12 @@ const PostDetails = () => {
             />
 
             <div className="max-w-3xl mx-auto p-4 space-y-6">
-
-                {/* Main Post Article */}
                 <motion.article
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-surface rounded-4xl p-6 border border-adaptive shadow-sm transition-colors duration-300 relative overflow-hidden"
                 >
+                    {/* User Info & Content */}
                     <div className="flex items-center justify-between mb-5">
                         <div className="flex items-center gap-3 cursor-pointer group">
                             <UserAvatar user={post.user} className="w-12 h-12 border border-adaptive rounded-full group-hover:border-primary transition-colors" />
@@ -538,11 +485,11 @@ const PostDetails = () => {
                         onSelectImage={setSelectedImage}
                     />
 
+                    {/* 🔥 UPDATED: StatsBar now uses sharesCount */}
                     <StatsBar
                         commentsCount={comments.length}
-                        shares={post.shares}
+                        sharesCount={sharesCount}
                         currentUser={currentUser}
-                        post={post}
                         showShareMenu={showShareMenu}
                         setShowShareMenu={setShowShareMenu}
                         showInternalShareModal={showInternalShareModal}
@@ -592,7 +539,6 @@ const PostDetails = () => {
                 onInput={handleTextareaInput}
                 onSubmit={handleAddComment}
             />
-
             <Lightbox
                 selectedImage={selectedImage}
                 onClose={() => setSelectedImage(null)}
@@ -605,7 +551,12 @@ const PostDetails = () => {
                 post={post}
                 onUpdateSuccess={(newContent) => setPost(prev => ({ ...prev, content: newContent }))}
             />
-
+            <ShareModal
+                isOpen={showInternalShareModal}
+                onClose={() => setShowInternalShareModal(false)}
+                post={post}
+                onSuccess={incrementShareCount}
+            />
             <AnimatePresence>
                 {showReportModal && (
                     <ReportModal
