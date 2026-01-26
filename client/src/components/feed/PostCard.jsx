@@ -252,14 +252,89 @@ const PostCard = ({ post, onDelete, priority, onReport }) => {
 
                 {/* Images Grid */}
                 {postImages.length > 0 && (
-                    <div className="rounded-xl overflow-hidden border border-black/5 dark:border-white/5 bg-black/5 dark:bg-white/5">
-                        {/* Images rendering logic (same as your original) */}
+                    <div className="rounded-xl overflow-hidden border border-black/5 dark:border-white/5 bg-black/5 dark:bg-white/5 mt-3">
+
+                        {/* CASE 1: Single Image */}
                         {postImages.length === 1 && (
                             <div className="w-full h-auto overflow-hidden cursor-zoom-in group">
-                                <img src={optimizeImage(postImages[0], 600)} alt="Post" width="600" height="400" className="w-full h-auto max-h-[600px] object-cover group-hover:scale-105 transition duration-500" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} />
+                                <img
+                                    src={optimizeImage(postImages[0], 600)}
+                                    alt="Post content"
+                                    className="w-full h-auto max-h-[600px] object-cover group-hover:scale-105 transition duration-500"
+                                    loading={priority ? "eager" : "lazy"}
+                                />
                             </div>
                         )}
-                        {/* ... other image grid layouts ... */}
+
+                        {/* CASE 2: Two Images (Side by Side) */}
+                        {postImages.length === 2 && (
+                            <div className="grid grid-cols-2 gap-0.5 h-[300px]">
+                                {postImages.map((img, i) => (
+                                    <div key={i} className="overflow-hidden cursor-pointer h-full group">
+                                        <img
+                                            src={optimizeImage(img, 400)}
+                                            alt={`Slide ${i}`}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* CASE 3: Three Images (2 Top, 1 Bottom Big) */}
+                        {postImages.length === 3 && (
+                            <div className="grid grid-cols-2 grid-rows-2 gap-0.5 h-[400px]">
+
+                                {/* الصورة الأولى (فوق شمال) */}
+                                <div className="overflow-hidden cursor-pointer h-full group">
+                                    <img
+                                        src={optimizeImage(postImages[0], 400)}
+                                        alt="Top Left"
+                                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                    />
+                                </div>
+
+                                {/* الصورة الثانية (فوق يمين) */}
+                                <div className="overflow-hidden cursor-pointer h-full group">
+                                    <img
+                                        src={optimizeImage(postImages[1], 400)}
+                                        alt="Top Right"
+                                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                    />
+                                </div>
+
+                                {/* الصورة الثالثة (تحت واخدة العرض كله) */}
+                                <div className="col-span-2 overflow-hidden cursor-pointer h-full group">
+                                    <img
+                                        src={optimizeImage(postImages[2], 600)}
+                                        alt="Bottom Full"
+                                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                    />
+                                </div>
+
+                            </div>
+                        )}
+
+                        {/* CASE 4+: Four or more Images (Grid) */}
+                        {postImages.length >= 4 && (
+                            <div className="grid grid-cols-2 gap-0.5 h-[400px]">
+                                {postImages.slice(0, 4).map((img, i) => (
+                                    <div key={i} className="relative overflow-hidden cursor-pointer h-full group">
+                                        <img
+                                            src={optimizeImage(img, 300)}
+                                            alt={`Slide ${i}`}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                        />
+                                        {/* Overlay for +More images on the last one */}
+                                        {i === 3 && postImages.length > 4 && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                <span className="text-white text-xl font-bold">+{postImages.length - 4}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -316,7 +391,10 @@ const arePropsEqual = (prev, next) => {
         prev.post.comments.length === next.post.comments.length &&
         prev.post.saves?.length === next.post.saves?.length &&
         prev.post.content === next.post.content &&
+
         prev.post.image === next.post.image &&
+        prev.post.image_urls?.length === next.post.image_urls?.length &&
+
         prev.priority === next.priority
     );
 };

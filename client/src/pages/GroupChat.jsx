@@ -85,17 +85,9 @@ const GroupChat = () => {
 
     // --- Optimized Callbacks (Performance Fixes) ---
 
-    // 1. Scroll to specific message
-    const scrollToMessage = useCallback((messageId) => {
-        const element = messageRefs.current[messageId];
-        if (element) {
-            element.scrollIntoView({ behavior: "smooth", block: "center" });
-            setHighlightedId(messageId);
-            setTimeout(() => setHighlightedId(null), 1000);
-        } else {
-            toast("Message not loaded", { icon: "🔍" });
-        }
-    }, []);
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    };
 
     // 2. Handle Message Reaction
     const handleReaction = useCallback(async (msgId, emoji) => {
@@ -215,7 +207,6 @@ const GroupChat = () => {
                 // Prevent duplicates & Scroll
                 setMessages((prev) => {
                     if (prev.some(m => m._id === msg._id)) return prev;
-                    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
                     return [...prev, msg];
                 });
 
@@ -260,19 +251,21 @@ const GroupChat = () => {
 
     // --- UI Effects ---
 
-    // Auto Scroll on new messages
-    useLayoutEffect(() => {
-        if (messagesEndRef.current && messages.length > 0) {
-            if (isFirstLoad.current) {
-                setTimeout(() => {
-                    messagesEndRef.current.scrollIntoView({ behavior: "auto", block: "end" });
+    // Auto Scroll on New Messages
+    useEffect(() => {
+        if (!loading && messages.length > 0) {
+            const timer = setTimeout(() => {
+                if (isFirstLoad.current) {
+                    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
                     isFirstLoad.current = false;
-                }, 100);
-            } else {
-                messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-            }
+                } else {
+                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                }
+            }, 100);
+
+            return () => clearTimeout(timer);
         }
-    }, [messages]);
+    }, [messages.length, loading]);
 
     // Audio Preview Animation
     useEffect(() => {
@@ -504,7 +497,7 @@ const GroupChat = () => {
                                 handleReaction={handleReaction}
                                 setReplyTo={handleSetReplyTo}
                                 setViewReactionMessage={handleSetViewReactionMessage}
-                                scrollToMessage={scrollToMessage}
+                                scrollToMessage={scrollToBottom}
                                 highlightedId={highlightedId}
                                 readStatus={getReadStatus(msg)}
                             />

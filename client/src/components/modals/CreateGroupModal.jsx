@@ -9,14 +9,16 @@
  */
 
 import { useState, useCallback } from "react";
-import axios from "axios";
+import api from "../../lib/axios"
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@clerk/clerk-react";
 
 // Icons
 import { X, Upload, Loader2, Users, Type } from "lucide-react";
 
 const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
+    const { getToken } = useAuth();
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [image, setImage] = useState(null);
@@ -42,8 +44,12 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
         if (image) formData.append("image", image);
 
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/group/create`, formData, {
-                headers: { "Content-Type": "multipart/form-data" },
+            const token = await getToken();
+
+            const res = await api.post(`/group/create`, formData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
                 withCredentials: true,
             });
 

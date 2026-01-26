@@ -42,7 +42,7 @@ app.use(cors({
     origin: [
         "http://localhost:5173", // Local Frontend
         "http://localhost:4173", // Local Preview
-        "https://flurry-app.vercel.app", // 🚨 الدومين الأساسي (مهم جداً)
+        "https://flurry-app.vercel.app", // 🚨 الدومين الأساسي (مهم جداً)]
         "https://flurry-fobctrqrq-ali-haggags-projects.vercel.app", // الدومين الفرعي اللي كان ضارب
         process.env.CLIENT_URL // لو حاطط قيمة في ملف .env
     ].filter(Boolean), // عشان يمسح أي قيمة فاضية لو الـ env مش موجود

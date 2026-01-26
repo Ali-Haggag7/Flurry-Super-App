@@ -35,6 +35,7 @@ import UserAvatar from "../components/common/UserDefaultAvatar";
  * - Optimized list filtering and rendering
  * - Themed UI (Dark/Light mode compatible)
  */
+
 const Connections = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -363,7 +364,7 @@ const Connections = () => {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.3 }}
-                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 h-full"
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 h-full items-start"
                         >
                             <AnimatePresence mode="popLayout">
                                 {activeData.length === 0 ? (
@@ -381,9 +382,9 @@ const Connections = () => {
                                         </p>
                                     </div>
                                 ) : (
-                                    activeData.map((user) => (
+                                    activeData.map((user, index) => (
                                         <ConnectionCard
-                                            key={`${user._id}-${user.requestType || "default"}`}
+                                            key={user._id || user.id || `user-${index}`}
                                             user={user}
                                             type={currentTab}
                                             requestType={user.requestType}
