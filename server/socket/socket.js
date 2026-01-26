@@ -22,10 +22,14 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
         origin: [
-            "http://localhost:5173", // Development
-            "http://localhost:4173", // Preview
-            "https://flurry-kkz2j0vdg-ali-haggags-projects.vercel.app",
-            "https://flurry-app.vercel.app"
+            "http://localhost:5173",
+            "http://localhost:4173",
+            // الرابط الأساسي بتاعك (ده المهم)
+            "https://flurry-app.vercel.app",
+            // الرابط اللي أنت فاتح منه حالياً (لازم تضيفه)
+            "https://flurry-fobctrqrq-ali-haggags-projects.vercel.app",
+            // اسمح بأي رابط فرعي لـ Vercel عشان تريح دماغك من روابط الـ Deployments الكتيرة
+            /\.vercel\.app$/
         ],
         methods: ["GET", "POST"],
         credentials: true
