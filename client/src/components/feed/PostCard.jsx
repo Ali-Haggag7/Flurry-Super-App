@@ -16,7 +16,7 @@ import { AnimatePresence } from "framer-motion";
 // Icons
 import {
     BadgeCheck, Heart, MessageCircle, Share2, Link2, Trash2, Send,
-    Flag, ExternalLink, MoreHorizontal, Bookmark, PenLine, ShieldAlert
+    Flag, ExternalLink, MoreHorizontal, Bookmark, PenLine, ShieldAlert, Check
 } from "lucide-react";
 
 // Components & Utils
@@ -45,6 +45,7 @@ const PostCard = ({ post, onDelete, priority, onReport }) => {
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
+    const [hasReported, setHasReported] = useState(post.reports?.includes(currentUser?._id) || false);
 
     // Derived Values
     const isOwner = currentUser?._id === post.user?._id;
@@ -231,8 +232,30 @@ const PostCard = ({ post, onDelete, priority, onReport }) => {
                                         </button>
                                     </>
                                 ) : (
-                                    <button onClick={(e) => { e.stopPropagation(); setShowOptionsMenu(false); setShowReportModal(true); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-amber-500 hover:bg-amber-500/20 transition-colors">
-                                        <Flag size={16} /> <span>Report</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (!hasReported) { // لو مش معمول ريبورت افتح المودال
+                                                setShowOptionsMenu(false);
+                                                setShowReportModal(true);
+                                            }
+                                        }}
+                                        disabled={hasReported} // 👈 اقفل الزرار لو مبلغ عنه
+                                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors
+                                                ${hasReported
+                                                ? "text-gray-400 cursor-not-allowed bg-gray-50/50"
+                                                : "text-amber-500 hover:bg-amber-500/20"
+                                            }`}
+                                    >
+                                        {hasReported ? (
+                                            <>
+                                                <Check size={16} /> <span>Reported</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Flag size={16} /> <span>Report</span>
+                                            </>
+                                        )}
                                     </button>
                                 )}
                             </div>
@@ -397,7 +420,7 @@ const PostCard = ({ post, onDelete, priority, onReport }) => {
             />
             <EditPostModal isOpen={showEditModal} onClose={() => setShowEditModal(false)} post={post} onUpdateSuccess={(newContent) => setDisplayContent(newContent)} />
             <AnimatePresence>
-                {showReportModal && <ReportModal postId={post._id} onClose={() => setShowReportModal(false)} />}
+                {showReportModal && <ReportModal postId={post._id} onClose={() => setShowReportModal(false)} onSuccess={() => setHasReported(true)} />}
             </AnimatePresence>
         </div>
     );
@@ -415,7 +438,9 @@ const arePropsEqual = (prev, next) => {
         prev.post.image === next.post.image &&
         prev.post.image_urls?.length === next.post.image_urls?.length &&
 
-        prev.priority === next.priority
+        prev.priority === next.priority &&
+
+        prev.post.reports?.length === next.post.reports?.length
     );
 };
 

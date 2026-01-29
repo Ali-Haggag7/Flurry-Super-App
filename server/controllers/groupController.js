@@ -214,20 +214,12 @@ export const joinGroup = expressAsyncHandler(async (req, res) => {
 
     await group.save();
 
-    // System Message
-    await GroupMessage.create({
-        group: groupId,
-        sender: currentUser._id,
-        text: `${currentUser.full_name} has joined the group`,
-        message_type: "system"
-    });
-
     // Populate and Return
     const populatedGroup = await group.populate("members.user", "full_name profile_picture");
 
     res.status(200).json({
         success: true,
-        message: "Joined successfully",
+        message: "Join request sent successfully",
         group: populatedGroup
     });
 });
@@ -303,12 +295,15 @@ export const respondToJoinRequest = expressAsyncHandler(async (req, res) => {
         // Notify Group via System Message
         const newMemberUser = await User.findById(memberId);
         if (newMemberUser) {
-            await GroupMessage.create({
+            const sysMsg = await GroupMessage.create({
                 group: groupId,
                 sender: newMemberUser._id,
                 text: `${newMemberUser.full_name} has joined the group`,
                 message_type: "system"
             });
+
+            const io = req.app.get("io");
+            if (io) io.to(groupId).emit("receiveGroupMessage", sysMsg);
         }
     } else {
         // Reject: Remove member from the list
@@ -336,18 +331,25 @@ export const getGroupDetails = expressAsyncHandler(async (req, res) => {
     const currentUser = await User.findOne({ clerkId: userId });
     const group = await Group.findById(groupId)
         .populate("members.user", "full_name profile_picture username bio")
-        .populate(POPULATE_OWNER);
+        .populate(POPULATE_OWNER || "owner");
 
-    if (!group) { res.status(404); throw new Error("Group not found"); }
+    if (!group) {
+        res.status(404);
+        throw new Error("Group not found");
+    }
 
+    // This handles cases where a member's account was deleted from the database
     const isMember = group.members.some(
-        m => m.user._id.toString() === currentUser._id.toString() && m.status === "accepted"
+        m => m.user && m.user._id.toString() === currentUser._id.toString() && m.status === "accepted"
     );
 
     if (!isMember) {
         res.status(403);
         throw new Error("Not a member");
     }
+
+    // Filter out deleted users from the response to prevent frontend issues
+    group.members = group.members.filter(m => m.user !== null);
 
     res.status(200).json({ success: true, group });
 });

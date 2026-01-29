@@ -424,17 +424,37 @@ const Chat = () => {
         </div>
     );
 
+    // --- Online Status Logic ---
     const isBlockedByMe = currentUser?.blockedUsers?.includes(targetUserId);
-    const isConnected = connections?.some(c => (c._id || c) === targetUserId);
     const isBlockedByThem = targetUser?.blockedUsers?.includes(currentUser?._id);
-    const isChatDisabled = isBlockedByMe || isBlockedByThem;
+    const isChatDisabled = isBlockedByMe || isBlockedByThem; // Any block disables chat
+
+    // Check if connected (adjust condition based on your connection logic)
+    const isConnected = connections?.some(c => (c._id || c) === targetUserId);
+
+    // Determine online status
     const isOnline = onlineUsers?.includes(targetUser?._id);
 
     const getStatusContent = () => {
-        if (isChatDisabled) return <span className="text-muted text-xs">User unavailable</span>;
+        // ⛔️ 1. الأولوية القصوى: لو فيه بلوك (من أي طرف)
+        // اخرج فوراً واعرض "User unavailable" أو رجع null لو مش عاوز تكتب حاجة خالص
+        if (isChatDisabled) {
+            return <span className="text-muted text-xs">User unavailable</span>;
+        }
+
+        // 👻 2. لو اليوزر مفعل وضع الشبح (خافي ظهوره)
         if (targetUser?.hideOnlineStatus) return null;
-        if (isOnline) return <span className="flex items-center gap-1.5 text-green-500 text-xs font-bold animate-pulse">Online</span>;
-        const lastSeenText = targetUser?.lastSeen ? `Last seen ${formatDistanceToNowStrict(new Date(targetUser.lastSeen), { addSuffix: true })}` : "Offline";
+
+        // 🟢 3. لو اليوزر أونلاين ومفيش موانع
+        if (isOnline) {
+            return <span className="flex items-center gap-1.5 text-green-500 text-xs font-bold animate-pulse">Online</span>;
+        }
+
+        // 🕒 4. حساب وقت آخر ظهور (الكود مش هيوصل هنا أبداً لو فيه بلوك)
+        const lastSeenText = targetUser?.lastSeen
+            ? `Last seen ${formatDistanceToNowStrict(new Date(targetUser.lastSeen), { addSuffix: true })}`
+            : "Offline";
+
         return <span className="text-muted text-xs">{lastSeenText}</span>;
     };
 

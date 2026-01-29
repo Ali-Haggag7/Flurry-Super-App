@@ -139,7 +139,11 @@ const MessageItem = ({
                         {/* Reply Preview inside Bubble */}
                         {msg.replyTo && (
                             <div
-                                onClick={(e) => { e.stopPropagation(); scrollToMessage(msg.replyTo._id || msg.replyTo); }}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    const targetId = msg.replyTo._id || msg.replyTo;
+                                    scrollToMessage(String(targetId));
+                                }}
                                 className={`w-full p-2 rounded-lg mb-1 text-xs border-l-[3px] cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition flex flex-col ${isMe ? "bg-white/20 border-white/50" : "bg-main border-primary"}`}
                             >
                                 <span className={`font-bold mb-0.5 block ${isMe ? "text-white" : "text-primary"}`}>
@@ -237,7 +241,8 @@ const arePropsEqual = (prevProps, nextProps) => {
     const isMsgSame =
         prevProps.msg === nextProps.msg &&
         prevProps.readStatus === nextProps.readStatus &&
-        prevProps.highlightedId === nextProps.highlightedId;
+        prevProps.highlightedId === nextProps.highlightedId &&
+        prevProps.scrollToMessage === nextProps.scrollToMessage;
 
     const wasActive = prevProps.activeReactionId === prevProps.msg._id;
     const isActive = nextProps.activeReactionId === nextProps.msg._id;

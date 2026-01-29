@@ -80,6 +80,10 @@ const postSchema = new mongoose.Schema(
                 ref: "User",
             },
         ],
+        reports: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }],
     },
     {
         timestamps: true, // Automatically manages createdAt and updatedAt

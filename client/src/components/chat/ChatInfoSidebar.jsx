@@ -162,7 +162,7 @@ const ChatInfoSidebar = ({ data, isGroup = false, isOpen, onClose, messages = []
             await api.put(`/group/leave/${data._id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
             toast.success("You left the group 👋");
             onClose();
-            navigate("/group/discovery");
+            navigate("/groups/available");
         } catch (error) { toast.error("Failed to leave"); }
     };
 
@@ -269,17 +269,31 @@ const ChatInfoSidebar = ({ data, isGroup = false, isOpen, onClose, messages = []
                                                 className="overflow-hidden"
                                             >
                                                 <div className="max-h-64 overflow-y-auto pr-2 space-y-2 custom-scrollbar mt-2 p-1">
-                                                    {members.map((memberWrap, index) => (
-                                                        <MemberItem
-                                                            key={memberWrap.user._id || index}
-                                                            member={memberWrap.user}
-                                                            isOwner={data.owner === memberWrap.user._id || data.owner?._id === memberWrap.user._id}
-                                                            amIAdmin={data.owner === currentUser._id || data.owner?._id === currentUser._id}
-                                                            currentUserId={currentUser._id}
-                                                            onKick={handleKickMember}
-                                                            onClick={(id) => navigate(`/profile/${id}`)}
-                                                        />
-                                                    ))}
+                                                    {members.map((memberWrap, index) => {
+                                                        const member = memberWrap?.user;
+                                                        if (!member) return null;
+
+                                                        return (
+                                                            <MemberItem
+                                                                key={member._id || index}
+                                                                member={member}
+
+                                                                isOwner={
+                                                                    data?.owner === member._id ||
+                                                                    data?.owner?._id === member._id
+                                                                }
+
+                                                                amIAdmin={
+                                                                    data?.owner === currentUser?._id ||
+                                                                    data?.owner?._id === currentUser?._id
+                                                                }
+
+                                                                currentUserId={currentUser?._id}
+                                                                onKick={handleKickMember}
+                                                                onClick={(id) => navigate(`/profile/${id}`)}
+                                                            />
+                                                        );
+                                                    })}
                                                 </div>
                                             </motion.div>
                                         )}

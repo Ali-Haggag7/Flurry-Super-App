@@ -112,7 +112,13 @@ const Profile = () => {
                     setActiveTab("posts");
                 }
 
-                setLoading(true);
+                if (isMyProfile && currentUser) {
+                    setProfileUser((prev) => prev || currentUser);
+                    setLoading(false);
+                } else {
+                    setLoading(true);
+                }
+
                 const { data } = await api.get(`/post/user/${targetProfileId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -160,6 +166,24 @@ const Profile = () => {
             fetchSaved();
         }
     }, [activeTab, isMyProfile, isSavedFetched, getToken]);
+
+    // 3. Sync Local State with Redux (Fix for Edit Profile)
+    useEffect(() => {
+        if (isMyProfile && currentUser) {
+            setProfileUser((prev) => {
+                if (!prev) return currentUser;
+                return {
+                    ...prev,
+                    full_name: currentUser.full_name,
+                    username: currentUser.username,
+                    bio: currentUser.bio,
+                    location: currentUser.location,
+                    profile_picture: currentUser.profile_picture,
+                    cover_photo: currentUser.cover_photo,
+                };
+            });
+        }
+    }, [currentUser, isMyProfile]);
 
     // --- Handlers (Memoized) ---
 
@@ -486,6 +510,7 @@ const ProfileAvatar = React.memo(({ profileUser, isRestricted, isMyProfile, onEd
                     <Edit3 size={18} />
                 </button>
             )}
+            
         </motion.div>
     </div>
 ));

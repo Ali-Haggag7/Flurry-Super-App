@@ -993,13 +993,13 @@ export const getSavedPosts = expressAsyncHandler(async (req, res) => {
 });
 
 /**
- * @desc Report a Post (Auto-Moderation)
+ * @desc Report a Post
  * @route POST /api/post/report/:id
  * @access Private
  */
 export const reportPost = expressAsyncHandler(async (req, res) => {
     const { id: postId } = req.params;
-    const { userId } = req.auth();
+    const { userId } = req.auth(); // Clerk ID
     const { reason } = req.body;
 
     const currentUser = await User.findOne({ clerkId: userId });
@@ -1014,33 +1014,37 @@ export const reportPost = expressAsyncHandler(async (req, res) => {
         throw new Error("Post not found");
     }
 
-    const existingReport = await Report.findOne({
-        reporter: currentUser,
-        targetPost: postId,
-    });
+    const isAlreadyReported = post.reports.includes(currentUser._id);
 
-    if (existingReport) {
+    if (isAlreadyReported) {
         res.status(400);
         throw new Error("You have already reported this post");
     }
 
     await Report.create({
-        reporter: currentUser,
+        reporter: currentUser._id,
         targetPost: postId,
         reason: reason || "Other",
     });
 
-    // Auto-Moderation Logic
-    const reportCount = await Report.countDocuments({ targetPost: postId });
+    const updatedPost = await Post.findByIdAndUpdate(
+        postId,
+        {
+            $addToSet: { reports: currentUser._id }
+        },
+        { new: true }
+    );
+
     const REPORT_THRESHOLD = 5;
 
-    if (reportCount >= REPORT_THRESHOLD) {
-        await Post.findByIdAndUpdate(postId, { isHidden: true });
+    if (updatedPost.reports.length >= REPORT_THRESHOLD) {
+        updatedPost.isHidden = true;
+        await updatedPost.save();
         console.log(`🚨 Auto-Moderation: Post ${postId} hidden due to high reports.`);
     }
 
     res.status(201).json({
         success: true,
-        message: "Report submitted. Thank you for making our community safer.",
+        message: "Report submitted successfully.",
     });
 });

@@ -85,9 +85,16 @@ const GroupChat = () => {
 
     // --- Optimized Callbacks (Performance Fixes) ---
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-    };
+    const scrollToMessage = useCallback((messageId) => {
+        const element = messageRefs.current[messageId];
+        if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+            setHighlightedId(messageId);
+            setTimeout(() => setHighlightedId(null), 1000);
+        } else {
+            toast("Message not loaded here", { icon: "🔍" });
+        }
+    }, []);
 
     // 2. Handle Message Reaction
     const handleReaction = useCallback(async (msgId, emoji) => {
@@ -168,7 +175,7 @@ const GroupChat = () => {
                 if (!myMemberRecord) {
                     setMembershipStatus("none");
                     toast.error("You are not a member of this group");
-                    navigate("/group/discovery");
+                    navigate("/groups/available");
                     return;
                 } else if (myMemberRecord.status === "pending") {
                     setMembershipStatus("pending");
@@ -184,7 +191,7 @@ const GroupChat = () => {
                 }
             } catch (err) {
                 console.error("Error fetching group:", err);
-                navigate("/group/discovery");
+                navigate("/groups/available");
             } finally {
                 setLoading(false);
             }
@@ -308,14 +315,14 @@ const GroupChat = () => {
         setNewMessage((prev) => prev + emojiObject.emoji);
     };
 
-    const handleInputChange = (e) => {
+    const handleInputChange = useCallback((e) => {
         setNewMessage(e.target.value);
-        if (!socket || !groupInfo?._id) return;
+        if (!socket || !groupId) return;
 
         if (!isTyping) {
             setIsTyping(true);
             socket.emit("typingGroup", {
-                groupId: groupInfo._id,
+                groupId: groupId,
                 username: currentUser.full_name.split(" ")[0],
                 image: currentUser.profile_picture || currentUser.image || "/avatar-placeholder.png"
             });
@@ -324,9 +331,9 @@ const GroupChat = () => {
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
             setIsTyping(false);
-            socket.emit("stop typingGroup", groupInfo._id);
+            socket.emit("stop typingGroup", groupId);
         }, 3000);
-    };
+    }, [socket, groupId, currentUser, isTyping]);
 
     // --- Audio Recorder Logic ---
     const startRecording = async () => {
@@ -443,7 +450,7 @@ const GroupChat = () => {
                 <ShieldAlert size={60} className="text-yellow-500" />
                 <h2 className="text-2xl font-bold text-content">Membership Pending</h2>
                 <p className="text-muted">Wait for the admin to accept your request.</p>
-                <button onClick={() => navigate("/group/discovery")} className="px-6 py-2 bg-primary text-white rounded-full transition hover:bg-primary/90">Go Back</button>
+                <button onClick={() => navigate("/groups/available")} className="px-6 py-2 bg-primary text-white rounded-full transition hover:bg-primary/90">Go Back</button>
             </div>
         );
     }
@@ -487,7 +494,7 @@ const GroupChat = () => {
                 <div className="flex-1 overflow-y-auto px-4 pt-24 pb-4 space-y-6 scrollbar-hide bg-main relative">
 
                     {messages.map((msg, idx) => (
-                        <div key={msg._id || idx} ref={(el) => (messageRefs.current[msg._id] = el)}>
+                        <div key={msg._id || idx} ref={(el) => (messageRefs.current[String(msg._id)] = el)}>
                             {/* Optimized Message Component */}
                             <MessageItem
                                 msg={msg}
@@ -497,7 +504,7 @@ const GroupChat = () => {
                                 handleReaction={handleReaction}
                                 setReplyTo={handleSetReplyTo}
                                 setViewReactionMessage={handleSetViewReactionMessage}
-                                scrollToMessage={scrollToBottom}
+                                scrollToMessage={scrollToMessage}
                                 highlightedId={highlightedId}
                                 readStatus={getReadStatus(msg)}
                             />

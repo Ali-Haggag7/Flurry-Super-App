@@ -57,6 +57,7 @@ const AuthWrapper = () => {
                         username: user.username,
                         firstName: user.firstName,
                         lastName: user.lastName,
+                        imageUrl: user.imageUrl,
                     };
 
                     await dispatch(syncUser({ userData, token })).unwrap();

@@ -21,7 +21,7 @@ import { createNotification } from "./notificationController.js";
  * @access Private
  */
 export const syncUser = expressAsyncHandler(async (req, res) => {
-    const { id, emailAddresses, firstName, lastName, imageUrl, username } = req.body;
+    const { id, emailAddresses, firstName, lastName, imageUrl, image_url, username } = req.body;
     const clerkUserId = id || (req.auth?.userId);
 
     if (!clerkUserId) {
@@ -31,7 +31,7 @@ export const syncUser = expressAsyncHandler(async (req, res) => {
 
     const email = emailAddresses?.[0]?.emailAddress || req.body.email;
     const fullName = (firstName && lastName) ? `${firstName} ${lastName}` : (req.body.fullName || "User");
-    const image = imageUrl || req.body.profilePicture || "";
+    const imageFromClerk = imageUrl || image_url || req.body.profile_image_url || "";
     const userNameData = username || req.body.username || email?.split("@")[0] || `user_${Date.now()}`;
 
     let user = await User.findOne({ clerkId: clerkUserId });
@@ -39,7 +39,9 @@ export const syncUser = expressAsyncHandler(async (req, res) => {
     if (user) {
         user.email = email;
         user.full_name = fullName;
-        if (image) user.profile_picture = image;
+        if (!user.profile_picture || user.profile_picture === "") {
+            user.profile_picture = imageFromClerk;
+        }
         user.username = userNameData;
         await user.save();
         return res.status(200).json({ success: true, user });
@@ -50,7 +52,7 @@ export const syncUser = expressAsyncHandler(async (req, res) => {
         email,
         full_name: fullName,
         username: userNameData,
-        profile_picture: image
+        profile_picture: imageFromClerk
     });
 
     // Send Welcome Email (Background Task)
@@ -98,7 +100,7 @@ export const updateUserData = expressAsyncHandler(async (req, res) => {
     const { userId } = req.auth();
     let { username, bio, location, full_name } = req.body;
 
-    // Username Uniqueness Check
+    // 1. Username Uniqueness Check
     if (username) {
         const tempUser = await User.findOne({ clerkId: userId });
         if (tempUser.username !== username) {
@@ -117,31 +119,59 @@ export const updateUserData = expressAsyncHandler(async (req, res) => {
         ...(full_name && { full_name }),
     };
 
-    // Handle Profile Picture
+    // 2. Handle Profile Picture Upload
     if (req.files?.profile_picture?.[0]) {
         const file = req.files.profile_picture[0];
-        const result = await imagekit.upload({ file: file.buffer, fileName: file.originalname });
+
+        // Optimization: Append timestamp to filename to prevent browser caching issues
+        const fileName = `${Date.now()}_${file.originalname}`;
+
+        const result = await imagekit.upload({
+            file: file.buffer,
+            fileName: fileName
+        });
+
         updatedData.profile_picture = imagekit.url({
             path: result.filePath,
             transformation: [{ format: "webp" }, { width: 512 }, { quality: "auto" }]
         });
     }
 
-    // Handle Cover Photo
+    // 3. Handle Cover Photo Upload
     if (req.files?.cover?.[0]) {
         const file = req.files.cover[0];
-        const result = await imagekit.upload({ file: file.buffer, fileName: file.originalname });
+
+        // Optimization: Append timestamp to filename
+        const fileName = `${Date.now()}_${file.originalname}`;
+
+        const result = await imagekit.upload({
+            file: file.buffer,
+            fileName: fileName
+        });
+
         updatedData.cover_photo = imagekit.url({
             path: result.filePath,
             transformation: [{ format: "webp" }, { width: 1280 }, { quality: "auto" }]
         });
     }
 
-    const user = await User.findOneAndUpdate({ clerkId: userId }, updatedData, { new: true }).select("-password");
+    // 4. Update Database & Return New User
+    const user = await User.findOneAndUpdate(
+        { clerkId: userId },
+        updatedData,
+        { new: true } // Important: Returns the modified document
+    ).select("-password");
 
-    if (!user) { res.status(404); throw new Error("User not found"); }
+    if (!user) {
+        res.status(404);
+        throw new Error("User not found");
+    }
 
-    res.status(200).json({ success: true, data: user, message: "Profile updated successfully" });
+    res.status(200).json({
+        success: true,
+        data: user, // This user object contains the NEW image URLs
+        message: "Profile updated successfully"
+    });
 });
 
 // =========================================================

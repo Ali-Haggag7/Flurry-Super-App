@@ -17,7 +17,7 @@ const NAV_ITEMS = [
     { icon: User, path: "/profile", label: "Profile", color: "text-cyan-500" },
     { icon: Users, path: "/connections", label: "Connections", color: "text-green-500" },
     { icon: Layers, path: "/groups", label: "My Groups", color: "text-indigo-500" },
-    { icon: Compass, path: "/groups/discovery", label: "Explore", color: "text-orange-500" },
+    { icon: Compass, path: "/groups/available", label: "Explore", color: "text-orange-500" },
     { icon: Settings, path: "/settings", label: "Settings", color: "text-gray-400" },
 ];
 

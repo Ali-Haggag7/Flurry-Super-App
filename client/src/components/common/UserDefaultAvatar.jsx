@@ -54,7 +54,7 @@ const UserAvatar = ({ user, className = "w-10 h-10", onCloseStory }) => {
     return (
         <>
             <div
-                className={`relative inline-block shrink-0 ${className} ${hasStories ? "cursor-pointer" : ""}`}
+                className={`relative inline-block shrink-0 ${className} ${hasStories ? "cursor-pointer" : "cursor-default"}`}
                 onClick={handleAvatarClick}
             >
                 {/* Story Ring (Only if has stories & not owner) */}
@@ -82,7 +82,12 @@ const UserAvatar = ({ user, className = "w-10 h-10", onCloseStory }) => {
                 )}
 
                 <img
-                    src={user?.profile_picture || user?.image || "/avatar-placeholder.png"}
+                    src={
+                        user?.profile_picture ||
+                        user?.imageUrl ||
+                        user?.image ||
+                        "/avatar-placeholder.png"
+                    }
                     alt="user"
                     className={`
                         w-full h-full rounded-full object-cover 
@@ -90,6 +95,10 @@ const UserAvatar = ({ user, className = "w-10 h-10", onCloseStory }) => {
                         bg-surface
                     `}
                     loading="lazy"
+                    onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/avatar-placeholder.png";
+                    }}
                 />
             </div>
 

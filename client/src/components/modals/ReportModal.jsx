@@ -27,11 +27,12 @@ const REPORT_REASONS = [
     "Other"
 ];
 
-const ReportModal = ({ postId, onClose }) => {
+const ReportModal = ({ postId, onClose, onSuccess }) => {
     const { getToken } = useAuth();
 
     const handleReport = async (reason) => {
         // Optimistic UI: Close and show success immediately
+        onSuccess();
         onClose();
         toast.success("Thanks! Report submitted successfully.");
 
@@ -47,7 +48,7 @@ const ReportModal = ({ postId, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
             {/* Backdrop */}
             <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
