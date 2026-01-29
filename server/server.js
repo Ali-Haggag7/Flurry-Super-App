@@ -63,11 +63,7 @@ const limiter = rateLimit({
 });
 app.use("/api", limiter);
 
-// Data Sanitization against NoSQL query injection
-app.use(mongoSanitize());
 
-// Prevent Parameter Pollution
-app.use(hpp());
 
 // =========================================================
 // 2. Webhooks (MUST be before Body Parser)
@@ -83,6 +79,12 @@ app.use("/api/inngest", serve({ client: inngest, functions }));
 
 // Body Parser
 app.use(express.json({ limit: "10mb" })); // Added limit to prevent large payload attacks
+
+// Data Sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Prevent Parameter Pollution
+app.use(hpp());
 
 // Clerk Authentication Middleware
 app.use(clerkMiddleware({
