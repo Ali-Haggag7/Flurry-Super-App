@@ -9,6 +9,8 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { clerkMiddleware } from "@clerk/express";
 import { serve } from "inngest/express";
+import mongoSanitize from "express-mongo-sanitize";
+import hpp from "hpp";
 
 // --- Imports: Internal ---
 import connectDB from "./configs/db.js";
@@ -42,10 +44,10 @@ app.use(cors({
     origin: [
         "http://localhost:5173", // Local Frontend
         "http://localhost:4173", // Local Preview
-        "https://flurry-app.vercel.app", // 🚨 الدومين الأساسي (مهم جداً)]
-        "https://flurry-fobctrqrq-ali-haggags-projects.vercel.app", // الدومين الفرعي اللي كان ضارب
-        process.env.CLIENT_URL // لو حاطط قيمة في ملف .env
-    ].filter(Boolean), // عشان يمسح أي قيمة فاضية لو الـ env مش موجود
+        "https://flurry-app.vercel.app",
+        "https://flurry-fobctrqrq-ali-haggags-projects.vercel.app",
+        process.env.CLIENT_URL
+    ].filter(Boolean),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
@@ -54,12 +56,18 @@ app.use(cors({
 // Rate Limiting: Prevent DDoS/Spam (1000 req / 15 min)
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 1000,
-    message: { success: false, message: "Too many requests, please try again later." },
+    max: 500,
+    message: { success: false, message: "Too many requests, slow down!" },
     standardHeaders: true,
     legacyHeaders: false,
 });
-app.use(limiter);
+app.use("/api", limiter);
+
+// Data Sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Prevent Parameter Pollution
+app.use(hpp());
 
 // =========================================================
 // 2. Webhooks (MUST be before Body Parser)
@@ -110,8 +118,6 @@ app.use((req, res, next) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-    console.error(`[Error] ${req.method} ${req.originalUrl}:`, err.stack);
-
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
 
     res.status(statusCode).json({
