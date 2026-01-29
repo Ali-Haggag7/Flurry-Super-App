@@ -9,7 +9,7 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { clerkMiddleware } from "@clerk/express";
 import { serve } from "inngest/express";
-import mongoSanitize from "express-mongo-sanitize";
+// import mongoSanitize from "express-mongo-sanitize";
 // import hpp from "hpp";
 
 // --- Imports: Internal ---
@@ -63,8 +63,6 @@ const limiter = rateLimit({
 });
 app.use("/api", limiter);
 
-
-
 // =========================================================
 // 2. Webhooks (MUST be before Body Parser)
 // =========================================================
@@ -84,7 +82,7 @@ app.use(express.json({ limit: "10mb" })); // Added limit to prevent large payloa
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Data Sanitization against NoSQL query injection
-app.use(mongoSanitize());
+// app.use(mongoSanitize());
 
 // Prevent Parameter Pollution
 // app.use(hpp());
