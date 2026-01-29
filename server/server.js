@@ -10,7 +10,7 @@ import rateLimit from "express-rate-limit";
 import { clerkMiddleware } from "@clerk/express";
 import { serve } from "inngest/express";
 import mongoSanitize from "express-mongo-sanitize";
-import hpp from "hpp";
+// import hpp from "hpp";
 
 // --- Imports: Internal ---
 import connectDB from "./configs/db.js";
@@ -80,11 +80,14 @@ app.use("/api/inngest", serve({ client: inngest, functions }));
 // Body Parser
 app.use(express.json({ limit: "10mb" })); // Added limit to prevent large payload attacks
 
+// URL Encoded Body Parser
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
 // Data Sanitization against NoSQL query injection
 app.use(mongoSanitize());
 
 // Prevent Parameter Pollution
-app.use(hpp());
+// app.use(hpp());
 
 // Clerk Authentication Middleware
 app.use(clerkMiddleware({
