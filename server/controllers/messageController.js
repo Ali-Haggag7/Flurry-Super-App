@@ -167,7 +167,9 @@ export const sendMessage = expressAsyncHandler(async (req, res) => {
             }
         } catch (uploadError) {
             res.status(500);
-            throw new Error("Media upload failed");
+            console.error("❌ ImageKit Upload Error:", uploadError); // ضيف السطر ده ضروري
+    res.status(500);
+    throw new Error(`Media upload failed: ${uploadError.message}`);
         }
     } else if (sharedPostId) {
         messageType = "shared_post";

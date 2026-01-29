@@ -333,7 +333,12 @@ const Chat = () => {
     };
 
     const getPostIdFromText = (text) => {
-        const match = text?.match(/post\/([a-fA-F0-9]{24})/);
+        // 🛡️ خط الدفاع الأول: لو مفيش نص أو النوع مش سترينج، اخلع فوراً
+        if (!text || typeof text !== "string") return null;
+        console.log(text);
+        
+        // كمل شغلك عادي وأنت مطمن
+        const match = text.match(/post\/([a-fA-F0-9]{24})/);
         return match ? match[1] : null;
     };
 
