@@ -63,7 +63,7 @@
    cd flurry-app
 
 2. **Install Dependencies**
-
+```bash
 # Install server dependencies
     cd server
     npm install
@@ -72,17 +72,23 @@
     cd ../client
     npm install
 
+```
 3. **Environment Variables Create a .env file in both client and server directories and add your keys (Clerk, MongoDB, ImageKit).**
 
 4. **Run the App**
 
+```bash
 # Run Backend (Open new terminal)
 cd server
 npm start
 
+```
+```bash
 # Run Frontend (Open separate terminal)
 cd client
 npm run dev
+
+```
 
 ---
 
