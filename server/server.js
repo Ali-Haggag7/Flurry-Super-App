@@ -38,21 +38,39 @@ app.set("trust proxy", 1);
 app.use(compression());
 
 // Helmet: Secure HTTP headers
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: false,
+}));
 
 // CORS: Cross-Origin Resource Sharing
+const allowedOrigins = [
+    "https://flurry-app.vercel.app",           // Production
+    "http://localhost:5173",                   // Local Dev
+    "http://localhost:4173",                   // Local Preview
+    // "https://flurry-app-i97fl.sevalla.app"  // (Optional: Self)
+];
+
 app.use(cors({
-    origin: [
-        "http://localhost:5173", // Local Frontend
-        "http://localhost:4173", // Local Preview
-        "https://flurry-app.vercel.app",
-        "https://flurry-fobctrqrq-ali-haggags-projects.vercel.app",
-        process.env.CLIENT_URL
-    ].filter(Boolean),
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
+        }
+
+        if (origin.endsWith(".vercel.app")) {
+            return callback(null, true);
+        }
+
+        callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
+
+// Handle Preflight requests explicitly
+app.options('*', cors());
 
 // Rate Limiting: Prevent DDoS/Spam (1000 req / 15 min)
 const limiter = rateLimit({

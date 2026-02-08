@@ -13,7 +13,6 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
-import cors from "cors";
 
 // Models
 import Message from "../models/Message.js";
@@ -26,26 +25,17 @@ import User from "../models/User.js";
 const app = express();
 const server = http.createServer(app);
 
-// Environment & CORS Config
-const allowedOrigins = [
-    "http://localhost:5173",
-    "http://localhost:4173",
-    "https://flurry-app.vercel.app",
-    /\.vercel\.app$/ // Regex to allow Vercel preview deployments
-];
-
-const corsConfig = {
-    origin: allowedOrigins,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-};
-
-app.use(cors(corsConfig));
-
 const io = new Server(server, {
-    cors: corsConfig,
-    pingTimeout: 60000, // Close connection after 60s of inactivity
+    cors: {
+        origin: [
+            "http://localhost:5173",
+            "http://localhost:4173",
+            "https://flurry-app.vercel.app",
+        ],
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    pingTimeout: 60000,
 });
 
 app.set("io", io);
