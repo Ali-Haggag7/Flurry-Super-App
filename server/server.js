@@ -69,9 +69,6 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 
-// Handle Preflight requests explicitly
-app.options('*', cors());
-
 // Rate Limiting: Prevent DDoS/Spam (1000 req / 15 min)
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,

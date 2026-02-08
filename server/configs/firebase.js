@@ -1,24 +1,25 @@
 import admin from "firebase-admin";
-import { createRequire } from "module";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const require = createRequire(import.meta.url);
-
 let serviceAccount;
 
 try {
-    // 1. الأولوية: لو احنا لايف، اقرأ المفاتيح من متغير البيئة
+    // 1. قراءة المفاتيح من متغير البيئة
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-        // لازم نعمل parse عشان نحول النص لـ JSON Object
         serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
+        // 🔥🔥 التعديل السحري: تصليح علامات السطر الجديد في المفتاح الخاص 🔥🔥
+        if (serviceAccount.private_key) {
+            serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        }
+
         console.log("✅ Loaded Firebase config from Env Var");
     }
-    // 2. البديل: لو احنا لوكال (على جهازك)، اقرأ من الملف
+    // 2. البديل: القراءة من الملف (للاستخدام المحلي)
     else {
-        serviceAccount = require("../firebase-key.json");
-        console.log("✅ Loaded Firebase config from local file");
+        console.warn("⚠️ Warning: No Firebase Env Var found.");
     }
 } catch (error) {
     console.error("❌ Error loading Firebase credentials:", error.message);
