@@ -145,25 +145,22 @@ app.use((err, req, res, next) => {
 });
 
 // =========================================================
-// 6️⃣ Database Connection & Server Initialization
+// 6️⃣ Server Initialization
 // =========================================================
 
 const PORT = process.env.PORT || 4000;
 
-// Establish Database Connection (Singleton pattern recommended for Serverless)
-connectDB();
+const startServer = async () => {
+    try {
+        await connectDB();
+        // تشغيل مباشر وصريح
+        server.listen(PORT, () => {
+            console.log(`✅ Production Server running on port: ${PORT}`);
+        });
+    } catch (error) {
+        console.error("❌ Database Connection Failed.");
+        process.exit(1);
+    }
+};
 
-/**
- * Server Startup Logic:
- * - In Development: We manually listen on the port to start the server.
- * - In Production (Vercel): We export the app. Vercel's serverless environment
- * manages the process and port binding automatically.
- */
-if (process.env.NODE_ENV !== "production") {
-    server.listen(PORT, () => {
-        console.log(`🚀 Local Server running in ${process.env.NODE_ENV} mode on port: ${PORT}`);
-    });
-}
-
-// Export the app for Vercel Serverless Functions
-export default app;
+startServer();
