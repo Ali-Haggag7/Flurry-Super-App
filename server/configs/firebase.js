@@ -1,3 +1,5 @@
+ALI_WAS_HERE
+
 /**
  * @fileoverview Firebase Admin SDK Configuration
  * Handles secure credential loading from Environment Variables.
