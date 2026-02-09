@@ -1,11 +1,16 @@
 import admin from "../configs/firebase.js";
 import User from "../models/User.js";
 
+// 🎨 CONFIG: Notification Appearance
+// ⚠️ IMPORTANT: Replace this with the FULL URL of your image on Cloudinary/Vercel
+// Example: "https://res.cloudinary.com/.../1769641208117_apple-touch-icon_xGjsDRYtd.png"
+const APP_LOGO_URL = "https://ik.imagekit.io/flowNet/tr:f-webp:w-512:q-auto/1769641208117_apple-touch-icon_xGjsDRYtd.png";
+
 /**
  * Sends a push notification to a single user based on their User ID.
  * Features:
  * 1. Fetches user tokens from DB.
- * 2. Handled Multi-device delivery (Multicast).
+ * 2. Optimized WebPush config to prevent duplicates & enhance UI.
  * 3. Automatically removes invalid/expired tokens (Cleanup).
  * * @param {string} userId - The target user's MongoDB _id.
  * @param {string} title - Notification title.
@@ -33,50 +38,69 @@ export const sendPushNotification = async (userId, title, body, data = {}) => {
         }
 
         if (!user.isPushEnabled) {
-            // console.log(`🔕 [Push] User ${userId} has disabled notifications.`);
             return;
         }
 
         if (!user.fcmTokens || user.fcmTokens.length === 0) {
-            // console.log(`⚠️ [Push] No FCM tokens found for user ${userId}.`);
             return;
         }
 
         // 3. Sanitize Data Payload
-        // Firebase Data values MUST be strings. We convert them here to avoid crashes.
+        // Firebase Data values MUST be strings.
         const stringifiedData = Object.keys(data).reduce((acc, key) => {
             acc[key] = String(data[key]);
             return acc;
         }, {});
 
-        // 4. Construct Message
+        // 4. Construct Professional Message Payload
         const message = {
+            // Standard Notification Data
             notification: {
-                title: title || "New Notification",
+                title: title || "Flurry Notification",
                 body: body || ""
             },
+
+            // 🎨 WebPush Specific Config (The Magic Part)
+            // This section controls how the notification looks on Chrome/Android
+            webpush: {
+                notification: {
+                    icon: APP_LOGO_URL,    // The main icon (Side image)
+                    badge: APP_LOGO_URL,   // Small status bar icon (Monochrome preferred)
+                    image: data.image || null, // Optional: Big picture inside notification
+
+                    // Interaction Settings
+                    click_action: "https://flurry-app.vercel.app/", // Opens this URL on click
+
+                    // De-duplication Logic
+                    // 'tag' groups notifications. 'renotify' makes phone vibrate again for new msg.
+                    tag: `flurry_msg_${Date.now()}`,
+                    renotify: true,
+                    requireInteraction: false // If true, notification stays until user closes it
+                },
+                fcm_options: {
+                    link: "https://flurry-app.vercel.app/" // Redundancy for click action
+                }
+            },
+
+            // Custom Data for Client Handling
             data: {
                 ...stringifiedData,
-                click_action: "/", // For Web/PWA to open root or specific path
-                type: "NOTIFICATION" // Custom marker
+                url: "/",
+                type: "NOTIFICATION"
             },
-            tokens: user.fcmTokens, // Sends to all user's devices
-        };
 
-        // console.log(`📨 [Push] Sending to ${user.fcmTokens.length} device(s)...`);
+            tokens: user.fcmTokens,
+        };
 
         // 5. Send Multicast
         const response = await admin.messaging().sendEachForMulticast(message);
 
-        // console.log(`✅ [Push] Sent. Success: ${response.successCount}, Failed: ${response.failureCount}`);
-
-        // 6. Token Cleanup Logic (Crucial for maintenance)
+        // 6. Token Cleanup Logic
         if (response.failureCount > 0) {
             const failedTokens = [];
             response.responses.forEach((resp, idx) => {
                 if (!resp.success) {
                     const error = resp.error;
-                    // Check if token is invalid or not registered
                     if (
                         error.code === "messaging/registration-token-not-registered" ||
                         error.code === "messaging/invalid-argument"
@@ -102,7 +126,7 @@ export const sendPushNotification = async (userId, title, body, data = {}) => {
 
 /**
  * Sends a push notification to a group of users.
- * Optimized for batch processing.
+ * Optimized for batch processing with WebPush styling.
  * * @param {Array<string>} memberIds - Array of user MongoDB _ids.
  * @param {string} title 
  * @param {string} body 
@@ -112,7 +136,7 @@ export const sendGroupPushNotification = async (memberIds, title, body, data = {
     try {
         if (!memberIds || memberIds.length === 0) return;
 
-        // 1. Fetch valid users with tokens
+        // 1. Fetch valid users
         const users = await User.find({
             _id: { $in: memberIds },
             isPushEnabled: true,
@@ -124,12 +148,9 @@ export const sendGroupPushNotification = async (memberIds, title, body, data = {
         if (!users || users.length === 0) return;
 
         // 2. Flatten & Deduplicate tokens
-        // (Set ensures we don't send to the same token twice if logic somehow duplicates it)
         const allTokens = [...new Set(users.flatMap(u => u.fcmTokens))];
 
         if (allTokens.length === 0) return;
-
-        // console.log(`📣 [Group Push] Targeting ${users.length} users (${allTokens.length} tokens).`);
 
         // 3. Sanitize Data
         const stringifiedData = Object.keys(data).reduce((acc, key) => {
@@ -137,18 +158,29 @@ export const sendGroupPushNotification = async (memberIds, title, body, data = {
             return acc;
         }, {});
 
-        // 4. Send Batch
-        // Note: Firebase has a limit of 500 tokens per multicast. 
-        // If your groups are huge, you might need to chunk this array.
+        // 4. Construct Group Message
         const message = {
             notification: { title, body },
+
+            // 🎨 Apply same styling to Group Messages
+            webpush: {
+                notification: {
+                    icon: APP_LOGO_URL,
+                    badge: APP_LOGO_URL,
+                    click_action: "https://flurry-app.vercel.app/",
+                    tag: `flurry_group_${Date.now()}`,
+                    renotify: true
+                },
+                fcm_options: {
+                    link: "https://flurry-app.vercel.app/"
+                }
+            },
+
             data: { ...stringifiedData, click_action: "/" },
             tokens: allTokens,
         };
 
         const response = await admin.messaging().sendEachForMulticast(message);
-
-        // console.log(`✅ [Group Push] Result -> Success: ${response.successCount}, Failed: ${response.failureCount}`);
 
     } catch (error) {
         console.error("🔥 [Group Push] Error:", error.message);
