@@ -1,9 +1,3 @@
-/**
- * @fileoverview Firebase Admin SDK Configuration
- * Handles secure credential loading from Environment Variables.
- * Supports automatic private key formatting for cloud deployment.
- */
-
 import admin from "firebase-admin";
 import dotenv from "dotenv";
 
@@ -15,35 +9,50 @@ try {
     const rawData = process.env.FIREBASE_SERVICE_ACCOUNT;
 
     if (rawData) {
-        console.log("📡 [Firebase Debug] Variable found! Length:", rawData.length);
+        // console.log("📡 [Firebase] Raw Config Found. Length:", rawData.length);
+
+        // 1. Parsing JSON
         serviceAccount = JSON.parse(rawData);
 
+        // 2. Fixing Private Key (Critical Step) 🔧
         if (serviceAccount.private_key) {
-            serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+            // تنظيف المفتاح من أي شوائب
+            serviceAccount.private_key = serviceAccount.private_key
+                .replace(/\\n/g, '\n')  // يحول \n لسطر جديد حقيقي
+                .replace(/\\\\n/g, '\n') // لو فيه دبل سلاش يصلحها
+                .replace(/"/g, '')      // يشيل أي علامات تنصيص غلط جت جوه المفتاح
+                .trim();                // يشيل المسافات اللي في الأول والآخر
+
+            // إعادة بناء الهيدر والفوتر لو باظوا من التنظيف
+            const header = "-----BEGIN PRIVATE KEY-----";
+            const footer = "-----END PRIVATE KEY-----";
+
+            if (!serviceAccount.private_key.includes(header)) {
+                serviceAccount.private_key = header + '\n' + serviceAccount.private_key;
+            }
+            if (!serviceAccount.private_key.includes(footer)) {
+                serviceAccount.private_key = serviceAccount.private_key + '\n' + footer;
+            }
+
+            // طباعة أول 20 حرف للتأكد (آمن، مبيفضحش المفتاح كله)
+            console.log("🔑 [Firebase] Key Start Check:", JSON.stringify(serviceAccount.private_key.substring(0, 50)));
         }
     } else {
-        // لو طبع دي في Sevalla يبقى السيرفر مش شايف المتغير أصلاً
-        console.error("📡 [Firebase Debug] Variable FIREBASE_SERVICE_ACCOUNT is UNDEFINED.");
+        console.error("❌ [Firebase] Env Var is Missing!");
     }
 } catch (error) {
-    console.error("❌ [Firebase Debug] JSON Parse Error:", error.message);
+    console.error("❌ [Firebase] Config Error:", error.message);
 }
 
-// ---------------------------------------------------------
-// 3. Initialize Firebase Admin SDK
-// ---------------------------------------------------------
-// Prevent multiple initializations (Singleton pattern)
 if (!admin.apps.length && serviceAccount) {
     try {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
         });
-        console.log("🚀 [Firebase Config] Admin SDK Initialized Successfully.");
+        console.log("🚀 [Firebase] Admin Initialized Successfully!");
     } catch (error) {
-        console.error("❌ [Firebase Config] Initialization Error:", error);
+        console.error("❌ [Firebase] Init Failed:", error);
     }
-} else if (!serviceAccount) {
-    console.error("🚨 [Firebase Config] Fatal: No valid service account provided. Notifications will fail.");
 }
 
 export default admin;
