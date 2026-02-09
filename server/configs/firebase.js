@@ -12,31 +12,21 @@ dotenv.config();
 let serviceAccount;
 
 try {
-    // ---------------------------------------------------------
-    // 1. Load Credentials from Environment Variable (Production)
-    // ---------------------------------------------------------
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-        // Parse the JSON string from the environment variable
-        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    const rawData = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-        // 🔧 CRITICAL FIX: Sanitize Private Key
-        // Replaces escaped newlines (\\n) with real newlines (\n)
-        // This is required for Vercel/Heroku/Sevalla environments.
+    if (rawData) {
+        console.log("📡 [Firebase Debug] Variable found! Length:", rawData.length);
+        serviceAccount = JSON.parse(rawData);
+
         if (serviceAccount.private_key) {
             serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
         }
-
-        console.log("✅ [Firebase Config] Successfully loaded credentials from Env Var.");
+    } else {
+        // لو طبع دي في Sevalla يبقى السيرفر مش شايف المتغير أصلاً
+        console.error("📡 [Firebase Debug] Variable FIREBASE_SERVICE_ACCOUNT is UNDEFINED.");
     }
-    // ---------------------------------------------------------
-    // 2. Fallback: Local Configuration (Optional)
-    // ---------------------------------------------------------
-    else {
-        console.warn("⚠️ [Firebase Config] Warning: FIREBASE_SERVICE_ACCOUNT Env Var not found.");
-    }
-
 } catch (error) {
-    console.error("❌ [Firebase Config] Failed to parse credentials:", error.message);
+    console.error("❌ [Firebase Debug] JSON Parse Error:", error.message);
 }
 
 // ---------------------------------------------------------
