@@ -2,8 +2,7 @@
 
 > **Flurry** is a fully functional, mobile-first social media application built with the MERN stack. It bridges the gap between traditional social feeds and instant messaging, offering a seamless, app-like experience on the web.
 
-[![Flurry Demo Watch Video](image.png)](https://www.linkedin.com/in/ali-haggag7)
-*(Click the image above to watch the demo video)*
+[![Flurry Demo Watch Video](image.png)](https://flurry-app.vercel.app/)
 
 ## 🚀 Live Demo
 [Click here to visit Flurry](https://flurry-app.vercel.app/)
